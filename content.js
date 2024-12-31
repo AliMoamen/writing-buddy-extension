@@ -17,8 +17,7 @@ if (!writingSubmission) {
 
   // Create textarea with enhanced styling
   const textareaElement = document.createElement("textarea");
-  textareaElement.value =
-    localStorage.getItem("writingSubmissionAutosave") || writingSubmission;
+  textareaElement.value = writingSubmission;
 
   // Enhanced textarea styling
   Object.assign(textareaElement.style, {
@@ -154,7 +153,6 @@ if (!writingSubmission) {
       confirm("Are you sure you want to reset? This action cannot be undone.")
     ) {
       textareaElement.value = writingSubmission;
-      localStorage.removeItem("writingSubmissionAutosave");
       updateAnalysis();
     }
   });
@@ -204,7 +202,6 @@ if (!writingSubmission) {
   // Event listeners
   textareaElement.addEventListener("input", () => {
     updateAnalysis();
-    localStorage.setItem("writingSubmissionAutosave", textareaElement.value);
   });
 
   // Assemble the UI
