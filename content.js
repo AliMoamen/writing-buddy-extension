@@ -1,4 +1,4 @@
-console.log("Enhanced Writing Extension Loaded!");
+console.log("Writing Analysis Extension Loaded!");
 
 // Get the content of the writing submission
 const writingSubmission =
@@ -34,32 +34,66 @@ if (!writingSubmission) {
     marginBottom: "15px",
   });
 
-  // Statistics panel
-  const statsPanel = document.createElement("div");
-  statsPanel.style.marginBottom = "15px";
-  statsPanel.style.display = "grid";
-  statsPanel.style.gridTemplateColumns = "repeat(auto-fit, minmax(200px, 1fr))";
-  statsPanel.style.gap = "10px";
+  // Analysis panel
+  const analysisPanel = document.createElement("div");
+  analysisPanel.style.marginBottom = "15px";
+  analysisPanel.style.display = "grid";
+  analysisPanel.style.gridTemplateColumns =
+    "repeat(auto-fit, minmax(200px, 1fr))";
+  analysisPanel.style.gap = "10px";
 
-  // Update statistics function
-  const updateStats = () => {
+  // Writing patterns
+  const patterns = {
+    transitionWords:
+      /\b(furthermore|moreover|however|therefore|consequently|additionally|nevertheless|in\s+addition|on\s+the\s+other\s+hand|in\s+conclusion)\b/gi,
+  };
+
+  // Update analysis function
+  const updateAnalysis = () => {
     const text = textareaElement.value;
-    const words = text.split(/\s+/).filter(Boolean).length;
-    const characters = text.length;
-    const sentences = text.split(/[.!?]+/).filter(Boolean).length;
-    const paragraphs = text.split(/\n\s*\n/).filter(Boolean).length;
-    const readingTime = Math.ceil(words / 200); // Assuming 200 words per minute
 
-    statsPanel.innerHTML = `
-      <div class="stat-item">Words: ${words}</div>
-      <div class="stat-item">Characters: ${characters}</div>
-      <div class="stat-item">Sentences: ${sentences}</div>
-      <div class="stat-item">Paragraphs: ${paragraphs}</div>
-      <div class="stat-item">Reading Time: ~${readingTime} min</div>
+    // Basic statistics
+    const words = text.split(/\s+/).filter(Boolean);
+    const sentences = text.split(/[.!?]+/).filter(Boolean);
+    const paragraphs = text.split(/\n\s*\n/).filter(Boolean);
+
+    // Readability
+    const syllableCount = words.reduce(
+      (count, word) => count + countSyllables(word),
+      0
+    );
+    const fleschKincaid = (
+      0.39 * (words.length / sentences.length) +
+      11.8 * (syllableCount / words.length) -
+      15.59
+    ).toFixed(1);
+
+    // Vocabulary diversity
+    const uniqueWords = new Set(words.map((word) => word.toLowerCase()));
+    const vocabularyDiversity = (
+      (uniqueWords.size / words.length) *
+      100
+    ).toFixed(1);
+
+    // Transition words analysis
+    const transitionWordsMatches = text.match(patterns.transitionWords) || [];
+    const transitionWordsPercentage = (
+      (transitionWordsMatches.length / sentences.length) *
+      100
+    ).toFixed(1);
+
+    // Update basic stats panel
+    analysisPanel.innerHTML = `
+      <div class="stat-item">Words: ${words.length}</div>
+      <div class="stat-item">Sentences: ${sentences.length}</div>
+      <div class="stat-item">Paragraphs: ${paragraphs.length}</div>
+      <div class="stat-item">Readability Grade: ${fleschKincaid}</div>
+      <div class="stat-item">Vocabulary Diversity: ${vocabularyDiversity}%</div>
+      <div class="stat-item">Transition Words Frequency: ${transitionWordsPercentage}%</div>
     `;
 
     // Style stat items
-    Array.from(statsPanel.children).forEach((item) => {
+    Array.from(analysisPanel.children).forEach((item) => {
       Object.assign(item.style, {
         padding: "8px",
         backgroundColor: "#fff",
@@ -69,6 +103,15 @@ if (!writingSubmission) {
       });
     });
   };
+
+  // Helper function to estimate syllables
+  function countSyllables(word) {
+    word = word.toLowerCase();
+    word = word.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/, "");
+    word = word.replace(/^y/, "");
+    const syllables = word.match(/[aeiouy]{1,2}/g);
+    return syllables ? syllables.length : 1;
+  }
 
   // Tools panel
   const toolsPanel = document.createElement("div");
@@ -102,10 +145,7 @@ if (!writingSubmission) {
   // Create toolbar buttons
   const buttons = {
     reset: createButton("Reset", "#dc3545", "#c82333"),
-    preview: createButton("Preview", "#28a745", "#218838"),
-    save: createButton("Save Draft", "#007bff", "#0056b3"),
-    format: createButton("Format Text", "#6610f2", "#520dc2"),
-    findReplace: createButton("Find/Replace", "#fd7e14", "#dc6502"),
+    preview: createButton("Preview", "#007bff", "#0056b3"),
   };
 
   // Add button functionality
@@ -115,108 +155,47 @@ if (!writingSubmission) {
     ) {
       textareaElement.value = writingSubmission;
       localStorage.removeItem("writingSubmissionAutosave");
-      updateStats();
+      updateAnalysis();
     }
   });
 
   buttons.preview.addEventListener("click", () => {
-    const modal = document.createElement("div");
-    Object.assign(modal.style, {
-      position: "fixed",
-      top: "50%",
-      left: "50%",
-      transform: "translate(-50%, -50%)",
-      width: "80%",
-      maxHeight: "80vh",
-      overflow: "auto",
-      padding: "30px",
-      backgroundColor: "#fff",
-      boxShadow: "0 4px 20px rgba(0, 0, 0, 0.15)",
-      zIndex: "1000",
-      borderRadius: "8px",
-    });
-
-    const content = document.createElement("div");
-    content.innerHTML = textareaElement.value.replace(/\n/g, "<br>");
-    content.style.lineHeight = "1.6";
-
-    const closeButton = createButton("Close", "#dc3545", "#c82333");
-    closeButton.style.marginTop = "20px";
-    closeButton.addEventListener("click", () =>
-      document.body.removeChild(modal)
-    );
-
-    modal.appendChild(content);
-    modal.appendChild(closeButton);
-    document.body.appendChild(modal);
-  });
-
-  buttons.save.addEventListener("click", () => {
-    const timestamp = new Date().toISOString();
-    const draft = {
-      content: textareaElement.value,
-      timestamp: timestamp,
-    };
-
-    let drafts = JSON.parse(localStorage.getItem("writingDrafts") || "[]");
-    drafts.push(draft);
-    localStorage.setItem("writingDrafts", JSON.stringify(drafts));
-    alert("Draft saved successfully!");
-  });
-
-  buttons.format.addEventListener("click", () => {
-    let text = textareaElement.value;
-    // Basic text formatting
-    text = text.replace(/\s+/g, " "); // Remove extra spaces
-    text = text.replace(/\n{3,}/g, "\n\n"); // Normalize paragraphs
-    text = text.replace(/([.!?])\s*(?=\w)/g, "$1 "); // Ensure space after punctuation
-    textareaElement.value = text.trim();
-    updateStats();
-  });
-
-  buttons.findReplace.addEventListener("click", () => {
-    const findReplaceModal = document.createElement("div");
-    Object.assign(findReplaceModal.style, {
-      position: "fixed",
-      top: "50%",
-      left: "50%",
-      transform: "translate(-50%, -50%)",
-      padding: "20px",
-      backgroundColor: "#fff",
-      boxShadow: "0 4px 20px rgba(0, 0, 0, 0.15)",
-      zIndex: "1000",
-      borderRadius: "8px",
-    });
-
-    findReplaceModal.innerHTML = `
-      <div style="margin-bottom: 15px;">
-        <input type="text" id="findText" placeholder="Find" style="margin-right: 10px; padding: 5px;">
-        <input type="text" id="replaceText" placeholder="Replace with" style="padding: 5px;">
-      </div>
-    `;
-
-    const replaceButton = createButton("Replace All", "#007bff", "#0056b3");
-    replaceButton.addEventListener("click", () => {
-      const findText = document.getElementById("findText").value;
-      const replaceText = document.getElementById("replaceText").value;
-      if (findText) {
-        const regex = new RegExp(findText, "g");
-        textareaElement.value = textareaElement.value.replace(
-          regex,
-          replaceText
-        );
-        updateStats();
-      }
-    });
-
-    const closeButton = createButton("Close", "#dc3545", "#c82333");
-    closeButton.addEventListener("click", () =>
-      document.body.removeChild(findReplaceModal)
-    );
-
-    findReplaceModal.appendChild(replaceButton);
-    findReplaceModal.appendChild(closeButton);
-    document.body.appendChild(findReplaceModal);
+    const popup = window.open("", "PreviewWindow", "width=800,height=600");
+    popup.document.write(`
+      <html>
+        <head>
+          <title>Preview</title>
+          <style>
+            body {
+              font-family: 'Segoe UI', Arial, sans-serif;
+              padding: 20px;
+              line-height: 1.6;
+              background-color: #f8f9fa;
+            }
+            pre {
+              white-space: pre-wrap;
+              word-wrap: break-word;
+              border: 1px solid #ced4da;
+              padding: 15px;
+              border-radius: 4px;
+              background-color: #fff;
+            }
+          </style>
+        </head>
+        <body>
+          <h1>Preview</h1>
+          <pre>${writingSubmission}</pre>
+          <button onclick="window.close()" style="
+            background-color: #dc3545; 
+            color: #fff; 
+            border: none; 
+            padding: 10px 20px; 
+            cursor: pointer; 
+            border-radius: 5px;
+          ">Close</button>
+        </body>
+      </html>
+    `);
   });
 
   // Add buttons to tools panel
@@ -224,17 +203,17 @@ if (!writingSubmission) {
 
   // Event listeners
   textareaElement.addEventListener("input", () => {
-    updateStats();
+    updateAnalysis();
     localStorage.setItem("writingSubmissionAutosave", textareaElement.value);
   });
 
   // Assemble the UI
   container.appendChild(toolsPanel);
   container.appendChild(textareaElement);
-  container.appendChild(statsPanel);
+  container.appendChild(analysisPanel);
 
-  // Initial stats update
-  updateStats();
+  // Initial analysis update
+  updateAnalysis();
 
   // Insert into the page
   const referenceElement = document.querySelector(
