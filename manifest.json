@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Writing Extension",
+  "name": "Writing Buddy Extension",
   "version": "1.0",
   "description": "Adds Extra Functionalities to Help Evaluate Writing.",
   "permissions": ["storage", "activeTab", "scripting"],
