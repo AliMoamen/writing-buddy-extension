@@ -1,8 +1,7 @@
-console.log("Writing Analysis Extension Loaded!");
-
+console.log(document.querySelectorAll('p[style="user-select: text;"]'));
 // Get the content of the writing submission
 const writingSubmission =
-  document.querySelectorAll('p[style="user-select: text;"]')[1]?.innerText ||
+  document.querySelectorAll('p[style="user-select: text;"]')[3]?.innerText ||
   "";
 
 if (!writingSubmission) {
