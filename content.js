@@ -1,8 +1,6 @@
-console.log(document.querySelectorAll('p[style="user-select: text;"]'));
 // Get the content of the writing submission
 const writingSubmission =
-  document.querySelectorAll('p[style="user-select: text;"]')[3]?.innerText ||
-  "";
+  document.querySelector('div[class="no-leading p mid"]').innerText || "";
 
 if (!writingSubmission) {
   console.error("Writing submission not found.");
